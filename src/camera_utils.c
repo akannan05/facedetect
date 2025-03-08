@@ -25,6 +25,7 @@ void yuyv_to_bgr(const uint8_t *yuyv, uint8_t *bgr, size_t w, size_t h){
         uint8_t *bgr2 = bgr + (i*6 + 3);
 
         //call helper per pixel
+        yuyv_to_bgr_pixel(y1, cb, y2, cr, bgr1, bgr2);
     }
 }
 
