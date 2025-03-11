@@ -25,10 +25,16 @@ void yuyv_to_bgr(const uint8_t *yuyv, uint8_t *bgr, size_t w, size_t h){
         uint8_t *bgr2 = bgr + (i*6 + 3);
 
         //call helper per pixel
+        yuyv_to_bgr_pixel(y1, cb, y2, cr, bgr1, bgr2);
     }
 }
 
-void yuyv_to_bgr_pixel(uint8_t y1, uint8_t cb, uint8_t y2, uint8_t cr, uint8_t *bgr_1, uint8_t *bgr2){
+void yuyv_to_bgr_pixel(uint8_t y1, uint8_t cb, uint8_t y2, uint8_t cr, uint8_t *bgr1, uint8_t *bgr2){
+    if(!bgr1 || !bgr2){
+        fprintf(stderr, "ERROR: invalid BGR buffer pointers\n");
+        return;
+    }
+
     int r, g, b;
 
     r = (int) (PIX/YUYV_2BGR_1) * (y1 - Y_OFFSET) + (PIX/YUYV_2BGR_2) * COEFF_1 * (cr - C_OFFSET);

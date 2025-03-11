@@ -11,11 +11,6 @@
 #include "camera_hal.h"
 #include "camera_utils.h"
 
-struct buffer{
-    void *start;
-    size_t length;
-};
-
 int open_camera(const char *device){
     int fd = open(device, O_RDWR);
     if (fd == -1){
@@ -45,8 +40,13 @@ int check_camera_capabilities(int fd){
     return 0;
 }
 
-int set_camera_format(int fd, int width, int height){
+CameraFormat set_camera_format(int fd, int width, int height){
     struct v4l2_format fmt;
+    CameraFormat camera_format;
+
+    camera_format.width = width;
+    camera_format.height = height;
+
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     fmt.fmt.pix.width = width;
@@ -56,11 +56,13 @@ int set_camera_format(int fd, int width, int height){
 
     if (ioctl(fd, VIDIOC_S_FMT, &fmt) == -1){
         perror("Error encountered while setting format.");
-        return -1;
+        camera_format.width = 0;
+        camera_format.height = 0;
+    } else {
+        printf("Format set: %dx%d\n", width, height);
     }
 
-    printf("Format set: %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
-    return 0;
+    return camera_format;
 } 
 
 struct buffer *buffers;
@@ -80,7 +82,7 @@ int request_and_map_buffers(int fd, int buff_count){
     buffers = calloc(req.count, sizeof(struct buffer));
     num_buffers = req.count;
 
-    for(int i = 0; i < req.count; i++){
+    for(size_t i = 0; i < req.count; i++){
         struct v4l2_buffer buf;
         memset(&buf, 0, sizeof(buf));
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -126,30 +128,47 @@ int start_streaming(int fd){
     return 0;
 }
 
-int capture_frame(int fd, const char *filename){
+void process_frame(int fd, CameraFormat fmt, bool save, const char *filename){
     struct v4l2_buffer buf;
     memset(&buf, 0, sizeof(buf));
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
+    // dequeue frame
     if (ioctl(fd, VIDIOC_DQBUF, &buf) == -1) {
-        perror("Error encountered dequeuing buffer.");
-        return -1;
+        perror("Error encountered whilst dequeueing buffer.");
+        return;
     }
 
-    FILE *file = fopen(filename, "wb");
-    if (file) {
-        fwrite(buffers[buf.index].start, buf.bytesused, 1, file);
+    uint8_t *bgr_data = malloc(fmt.width * fmt.height * 3); // bgr is 3 bytes per 1 pixel
+    if(!bgr_data){
+        perror("Memory allocation error on BGR buffer.");
+        return;
+    }
+
+    yuyv_to_bgr((uint8_t *)buffers[buf.index].start, bgr_data, fmt.width, fmt.height);
+
+    if(save && filename) {
+        FILE *file = fopen(filename, "wb");
+        if (!file){
+            perror("Error opening file for saving frame");
+            free(bgr_data);
+            return;
+        }
+
+        size_t written = fwrite(bgr_data, 1, buf.bytesused * 3 / 2, file);
+        if (written != buf.bytesused * 3 / 2){
+            perror("Error writing frame data to file.");
+        }
+
         fclose(file);
-        printf("Saved frame to %s\n", filename);
     }
 
     if (ioctl(fd, VIDIOC_QBUF, &buf) == -1) {
-        perror("Error encountered re-queuing buffer.");
-        return -1;
+        perror("Error encountered whilst requeueing buffer.");
     }
 
-    return 0;
+    free(bgr_data);
 }
 
 void stop_streaming(int fd){
@@ -162,20 +181,4 @@ void stop_streaming(int fd){
 
     free(buffers);
     close(fd);
-}
-
-int main() {
-    const char *device = "/dev/video0";
-    int fd = open_camera(device);
-    if (fd == -1) return 1;
-
-    if (check_camera_capabilities(fd) == -1) return 1;
-    if (set_camera_format(fd, 240, 240) == -1) return 1;
-    if (request_and_map_buffers(fd, 4) == -1) return 1;
-    if (start_streaming(fd) == -1) return 1;
-
-    capture_frame(fd, "frame.yuyv");
-
-    stop_streaming(fd);
-    return 0;
-}
+} 
