@@ -149,19 +149,7 @@ void process_frame(int fd, CameraFormat fmt, bool save, const char *filename){
     yuyv_to_bgr((uint8_t *)buffers[buf.index].start, bgr_data, fmt.width, fmt.height);
 
     if(save && filename) {
-        FILE *file = fopen(filename, "wb");
-        if (!file){
-            perror("Error opening file for saving frame");
-            free(bgr_data);
-            return;
-        }
-
-        size_t written = fwrite(bgr_data, 1, buf.bytesused * 3 / 2, file);
-        if (written != buf.bytesused * 3 / 2){
-            perror("Error writing frame data to file.");
-        }
-
-        fclose(file);
+       save_bgr_to_png(bgr_data, fmt.width, fmt.height, filename); 
     }
 
     if (ioctl(fd, VIDIOC_QBUF, &buf) == -1) {

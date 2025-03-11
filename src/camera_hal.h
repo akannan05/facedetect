@@ -1,11 +1,9 @@
-<<<<<<< HEAD
+#ifndef CAMERA_HAL_H
+#define CAMERA_HAL_H
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
-=======
-#ifndef CAMERA_HAL_H
-#define CAMERA_HAL_H
->>>>>>> 43fb2454fde5362930489c8c046e42b479a2db8c
 
 #include <linux/videodev2.h>
 

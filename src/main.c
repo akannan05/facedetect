@@ -17,7 +17,7 @@ int main() {
     // actual image capturing & processing
     if (start_streaming(fd) == -1) return 1;
 
-    process_frame(fd, fmt, 1, "output_frame.bmp");    
+    process_frame(fd, fmt, 1, "output_frame.png");    
 
     stop_streaming(fd);
     return 0;

@@ -1,5 +1,6 @@
 CC = gcc
 CCFLAGS = -Wall -Wextra
+LIBS = -lpng
 DEPS = camera_hal.h camera_utils.h
 OBJS = main.o camera_hal.o camera_utils.o
 
@@ -7,4 +8,4 @@ OBJS = main.o camera_hal.o camera_utils.o
 	$(CC) -c -o $@ $< $(CCFLAGS)
 
 main: $(OBJS)
-	$(CC) $(CCFLAGS) -o test $(OBJS)
+	$(CC) $(CCFLAGS) -o test $(OBJS) $(LIBS)
